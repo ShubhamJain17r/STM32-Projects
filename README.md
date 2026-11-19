@@ -1,38 +1,52 @@
-# STM32-Projects: Layer 3 Applications & Embedded Robotics
+# STM32-Projects: Incubator & Multi-Robot Template Playground
 
-Production-grade embedded applications and robotics systems targeting the **STM32F446RE** microcontroller (ARM Cortex-M4F @ 180 MHz), tested on the NUCLEO-F446RE development board and ready for custom PCB deployment.
+Production-grade embedded robotics incubator and multi-robot template playground targeting the **STM32F446RE** microcontroller (ARM Cortex-M4F @ 180 MHz).
+
+This repository serves as the **incubator playground** where new experimental robot prototypes (e.g., Micromouse, Two-Wheel Balancing Robot, Drone Flight Controller, Autonomous Rover) begin their development lifecycle, mature, and graduate into dedicated standalone product repositories.
 
 ---
 
-## Architecture Overview
+## Graduation Model
 
-This repository represents **Layer 3 (Application Layer)** in our modular embedded architecture. It consumes two linked Git submodules in `lib/`:
+Robotics projects at our lab follow a three-stage graduation lifecycle:
+
+1. **Incubator Prototyping (`STM32-Projects/apps/`)**:
+   - New robot ideas start inside `apps/` using `apps/template_project` as the starter template.
+   - Algorithms, sensor drivers, and closed-loop control schemes are validated on NUCLEO-F446RE breadboard/protoboard testbenches.
+2. **Standardization & Architecture Maturation**:
+   - Hardware pin mappings, timer allocations, and communications are standardized against `lib/STM32-Library`, `lib/STM32-Components`, and `lib/Embedded-Algorithms`.
+3. **Official Graduation (Dedicated Product Repository)**:
+   - Once a robot reaches full hardware-software maturity, it graduates into its own dedicated repository complete with standalone firmware, KiCad schematic/layout PCBs, and mechanical CAD.
+   - **Graduated Reference**: [`STM32-Line-Follower-Robot`](https://github.com/ShubhamJain17r/STM32-Line-Follower-Robot) (Officially graduated from this incubator).
+
+---
+
+## Repository Structure
 
 ```
 STM32-Projects/
+├── apps/
+│   ├── line_follower_benchmark/    # [Benchmark] Clean reference benchmark for 1 kHz closed-loop control
+│   └── template_project/           # [Starter Template] Starter foundation for future robots (e.g. Micromouse)
+│
 ├── lib/
-│   ├── STM32-Library/               # [Layer 1] Bare-metal C++17 Peripheral Engine
-│   │   ├── Inc/stm32/               # (GPIO, ADC, PWM, Timers, UART, SPI, I2C, DMA, SysTick)
-│   │   └── Drivers/CMSIS/           # Official CMSIS Core and STM32F4xx headers
-│   │
-│   └── STM32-Components/            # [Layer 2] External Sensor & Actuator Drivers
-│       └── include/components/      # (TB6612FNG, QTR-8A, HC-05, ADXL345, SSD1306, etc.)
+│   ├── STM32-Library/              # [Layer 1] Bare-metal C++17 Peripheral Engine (stm32::hal)
+│   ├── STM32-Components/           # [Layer 2] External Sensor & Actuator Drivers (stm32::components)
+│   └── Embedded-Algorithms/        # [Algorithms] Shared Robotics Algorithms (stm32::algorithms)
 │
-├── projects/                        # [Layer 3] Standalone Application Projects
-│   └── line_follower_robot/         # High-Speed Competition Line Following Robot
-│
-├── CMakeLists.txt                   # Root CMake build orchestrator
-├── Makefile                         # Unified root Makefile runner
-└── README.md                        # Documentation and project index
+├── CMakeLists.txt                  # Dynamic application discovery & modern CMake orchestrator
+├── Makefile                        # Unified root Makefile runner
+└── README.md                       # Documentation and incubator index
 ```
 
 ---
 
-## Projects Index
+## Applications Index
 
-| Project | Target MCU | Key Hardware / Sensors | Status |
+| Application | Target MCU | Key Features / Hardware | Role |
 | :--- | :--- | :--- | :--- |
-| **`projects/line_follower_robot`** | STM32F446RE | 8-Ch QTR Reflectance Array, TB6612FNG, N20 600 RPM Motors, HC-05 Bluetooth | Active (Phase 1) |
+| **[`apps/line_follower_benchmark`](apps/line_follower_benchmark)** | STM32F446RE | 1 kHz closed-loop loop, dual encoder odometry, 20 kHz TB6612 PWM, QTR reflectance array, HC-05 telemetry | Primary Benchmark Reference |
+| **[`apps/template_project`](apps/template_project)** | STM32F446RE | Deterministic 1 ms SysTick control loop, RobotApp lifecycle state machine, configurable pinout | Starter Template for New Robots |
 
 ---
 
@@ -43,35 +57,65 @@ STM32-Projects/
 - GNU Make 4.0+ or CMake 3.16+
 - OpenOCD or `st-flash` for flashing to NUCLEO-F446RE
 
+---
+
 ### Building via Makefile
+
 ```bash
-# Build default project (projects/line_follower_robot)
+# 1. Build default benchmark application (apps/line_follower_benchmark)
 make
 
-# Build specific project
-make PROJECT=projects/line_follower_robot
+# 2. Build a specific application prototype
+make APP=apps/template_project
+# or by shorthand:
+make APP=template_project
 
-# Check binary footprint
+# 3. Clean build artifacts
+make clean                  # Clean current APP
+make clean-all              # Clean all apps in apps/*
+
+# 4. Check binary memory footprint
 make size
 
-# Flash to Nucleo board via OpenOCD
-make flash
+# 5. Flash to Nucleo board
+make flash                  # Flash via OpenOCD
+make flash-stlink           # Flash via ST-Link utility
 
-# Flash via ST-Link utility
-make flash-stlink
-
-# Clean build artifacts
-make clean
+# 6. Validate linked submodules
+make test-submodules
 ```
 
 ---
 
-## Coding & Architectural Standards
+### Building via Modern CMake
 
-1. **Bare-Metal C++17 (No RTOS, Zero Vendor HAL Bloat)**:
-   - Direct register manipulation and lightweight zero-cost C++ abstractions.
-   - Strictly `-fno-exceptions -fno-rtti -fno-use-cxa-atexit`.
-2. **Zero Dynamic Memory Allocation**:
-   - Heap footprint = 0 bytes. All buffers, queues, and structures are statically or stack allocated.
-3. **Hardware Independence & Custom PCB Readiness**:
-   - Pin definitions and peripheral configurations are cleanly isolated in `robot_config.hpp` files.
+The root `CMakeLists.txt` automatically discovers all applications under `apps/` and configures them with modern CMake targets (`stm32::hal`, `stm32::components`, `stm32::algorithms`):
+
+```bash
+# Configure and build all applications
+mkdir -p build && cd build
+cmake ..
+cmake --build .
+
+# Flash specific application via CMake target
+cmake --build . --target line_follower_benchmark
+```
+
+---
+
+## Starting a New Robot Prototype
+
+To incubate a new robot (e.g., `micromouse_prototype`):
+
+```bash
+# 1. Copy the starter template
+cp -r apps/template_project apps/micromouse_prototype
+
+# 2. Update APP_TARGET in apps/micromouse_prototype/CMakeLists.txt and TARGET in Makefile
+sed -i 's/template_project/micromouse_prototype/g' apps/micromouse_prototype/CMakeLists.txt
+sed -i 's/template_project/micromouse_prototype/g' apps/micromouse_prototype/Makefile
+
+# 3. Customize hardware pins in include/robot_config.hpp
+# 4. Build immediately from root
+make APP=micromouse_prototype
+```
