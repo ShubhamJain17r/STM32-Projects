@@ -30,7 +30,7 @@ endif
 
 export PREFIX
 
-.PHONY: all clean clean-all size flash flash-stlink help test-submodules
+.PHONY: all clean clean-all size flash flash-stlink help test test-submodules test-algorithms test-apps
 
 all:
 	@if [ -d "$(APP_PATH)" ]; then \
@@ -89,6 +89,30 @@ test-submodules:
 	@$(MAKE) -C lib/STM32-Components EXAMPLE=examples/smoke_test LIB_DIR=../STM32-Library all
 	@echo "All submodules built successfully!"
 
+test-algorithms:
+	@echo "Testing Embedded-Algorithms test suite (Host C++ / CTest)..."
+	@cmake -B lib/Embedded-Algorithms/build -S lib/Embedded-Algorithms -DBUILD_TESTS=ON > /dev/null
+	@cmake --build lib/Embedded-Algorithms/build > /dev/null
+	@ctest --test-dir lib/Embedded-Algorithms/build --output-on-failure
+	@rm -rf lib/Embedded-Algorithms/build
+	@echo "Embedded-Algorithms test suite passed!"
+
+test-apps:
+	@echo "Testing build integrity of all incubator apps..."
+	@for app in apps/*; do \
+		if [ -f "$$app/Makefile" ]; then \
+			echo "Building $$app..."; \
+			$(MAKE) -C "$$app" all > /dev/null || exit 1; \
+			$(MAKE) -C "$$app" size || exit 1; \
+		fi \
+	done
+	@echo "All application prototypes built successfully!"
+
+test: test-submodules test-algorithms test-apps
+	@echo "======================================================================"
+	@echo "All tests passed! Repository and submodules integrity fully verified."
+	@echo "======================================================================"
+
 help:
 	@echo "STM32-Projects: Incubator & Multi-Robot Template Playground"
 	@echo "==========================================================="
@@ -100,4 +124,7 @@ help:
 	@echo "make size                        : Print binary memory footprint"
 	@echo "make flash                       : Program MCU via OpenOCD"
 	@echo "make flash-stlink                : Program MCU via ST-Link utility"
-	@echo "make test-submodules             : Validate builds of linked submodules"
+	@echo "make test                        : Run full test suite (submodules, algorithms, apps)"
+	@echo "make test-submodules             : Validate builds of Layer 1 & 2 submodules"
+	@echo "make test-algorithms             : Run Embedded-Algorithms unit tests"
+
