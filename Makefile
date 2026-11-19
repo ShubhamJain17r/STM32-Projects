@@ -1,17 +1,23 @@
 # ==============================================================================
-# Makefile for STM32-Projects (Layer 3 Applications & Embedded Robotics)
-# Target MCU: STM32F446RE (ARM Cortex-M4F)
+# Makefile for STM32-Projects: Incubator & Multi-Robot Template Playground
+# Target MCU: STM32F446RE (ARM Cortex-M4F @ 180 MHz)
 # ==============================================================================
 
-# User-selectable target (defaults to apps/line_follower, falls back to projects/line_follower_robot)
-ifneq ($(wildcard apps/line_follower),)
-    DEFAULT_TARGET = apps/line_follower
-else
-    DEFAULT_TARGET = projects/line_follower_robot
-endif
+# User-selectable target (defaults to primary benchmark: apps/line_follower_benchmark)
+DEFAULT_APP ?= apps/line_follower_benchmark
 
-APP     ?= $(DEFAULT_TARGET)
-PROJECT ?= $(APP)
+APP ?= $(DEFAULT_APP)
+
+# Normalize APP: allow both APP=apps/<target> and APP=<target>
+ifeq ($(wildcard $(APP)),)
+    ifneq ($(wildcard apps/$(APP)),)
+        APP_PATH := apps/$(APP)
+    else
+        APP_PATH := $(APP)
+    endif
+else
+    APP_PATH := $(APP)
+endif
 
 # Toolchain configuration (override via environment or CLI: make ARM_TOOLCHAIN_DIR=...)
 ifneq ($(ARM_TOOLCHAIN_DIR),)
@@ -24,47 +30,56 @@ endif
 
 export PREFIX
 
-.PHONY: all clean size flash flash-stlink help test-submodules
+.PHONY: all clean clean-all size flash flash-stlink help test-submodules
 
 all:
-	@if [ -d "$(PROJECT)" ]; then \
+	@if [ -d "$(APP_PATH)" ]; then \
 		echo "======================================================================"; \
-		echo "Building Target: $(PROJECT)"; \
+		echo "Building Application Prototype: $(APP_PATH)"; \
 		echo "======================================================================"; \
-		$(MAKE) -C $(PROJECT) all; \
+		$(MAKE) -C $(APP_PATH) all; \
 	else \
-		echo "Target directory '$(PROJECT)' not found on current branch."; \
-		echo "Switch to the project branch or specify APP=<path> or PROJECT=<path>."; \
+		echo "Error: Target directory '$(APP_PATH)' not found."; \
+		echo "Specify a valid app using APP=apps/<target> or APP=<target>."; \
 		exit 1; \
 	fi
 
 clean:
-	@if [ -d "$(PROJECT)" ]; then \
-		echo "Cleaning build artifacts in $(PROJECT)..."; \
-		$(MAKE) -C $(PROJECT) clean; \
+	@if [ -d "$(APP_PATH)" ]; then \
+		echo "Cleaning build artifacts in $(APP_PATH)..."; \
+		$(MAKE) -C $(APP_PATH) clean; \
 	else \
-		echo "Target directory '$(PROJECT)' not found."; \
+		echo "Target directory '$(APP_PATH)' not found."; \
 	fi
 
+clean-all:
+	@echo "Cleaning all application prototypes in apps/..."
+	@for app in apps/*; do \
+		if [ -f "$$app/Makefile" ]; then \
+			echo "Cleaning $$app..."; \
+			$(MAKE) -C "$$app" clean; \
+		fi \
+	done
+
 size:
-	@if [ -d "$(PROJECT)" ]; then \
-		$(MAKE) -C $(PROJECT) size; \
+	@if [ -d "$(APP_PATH)" ]; then \
+		$(MAKE) -C $(APP_PATH) size; \
 	else \
-		echo "Target directory '$(PROJECT)' not found."; \
+		echo "Target directory '$(APP_PATH)' not found."; \
 	fi
 
 flash:
-	@if [ -d "$(PROJECT)" ]; then \
-		$(MAKE) -C $(PROJECT) flash; \
+	@if [ -d "$(APP_PATH)" ]; then \
+		$(MAKE) -C $(APP_PATH) flash; \
 	else \
-		echo "Target directory '$(PROJECT)' not found."; \
+		echo "Target directory '$(APP_PATH)' not found."; \
 	fi
 
 flash-stlink:
-	@if [ -d "$(PROJECT)" ]; then \
-		$(MAKE) -C $(PROJECT) flash-stlink; \
+	@if [ -d "$(APP_PATH)" ]; then \
+		$(MAKE) -C $(APP_PATH) flash-stlink; \
 	else \
-		echo "Target directory '$(PROJECT)' not found."; \
+		echo "Target directory '$(APP_PATH)' not found."; \
 	fi
 
 test-submodules:
@@ -75,12 +90,13 @@ test-submodules:
 	@echo "All submodules built successfully!"
 
 help:
-	@echo "STM32-Projects Unified Build System"
-	@echo "-----------------------------------"
-	@echo "make                             : Build default target ($(PROJECT))"
-	@echo "make APP=apps/<name>             : Build specific application"
-	@echo "make PROJECT=projects/<name>     : Build specific project"
+	@echo "STM32-Projects: Incubator & Multi-Robot Template Playground"
+	@echo "==========================================================="
+	@echo "make                             : Build default benchmark ($(DEFAULT_APP))"
+	@echo "make APP=apps/<target>           : Build specific application (e.g. apps/template_project)"
+	@echo "make APP=<target>                : Build specific application by name (e.g. template_project)"
 	@echo "make clean                       : Clean build directory for current target"
+	@echo "make clean-all                   : Clean all application prototypes in apps/"
 	@echo "make size                        : Print binary memory footprint"
 	@echo "make flash                       : Program MCU via OpenOCD"
 	@echo "make flash-stlink                : Program MCU via ST-Link utility"
