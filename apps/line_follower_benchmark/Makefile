@@ -3,12 +3,13 @@
 # Target MCU: STM32F446RE (ARM Cortex-M4F @ 180 MHz)
 # ==============================================================================
 
-TARGET    = line_follower
+TARGET    = line_follower_benchmark
 BUILD_DIR = build
 
 # Base paths to submodules
 ROOT_DIR  = ../..
 COMP_DIR  = $(ROOT_DIR)/lib/STM32-Components
+ALGO_DIR  = $(ROOT_DIR)/lib/Embedded-Algorithms
 
 # Resolve Layer 1 directory (prefer components nested submodule, fallback to root submodule)
 ifneq ($(wildcard $(COMP_DIR)/lib/STM32-Library/Inc),)
@@ -49,6 +50,10 @@ INCLUDES = \
     -I$(LIB_DIR)/Inc \
     -I$(CMSIS_DIR)/Device/ST/STM32F4xx/Include \
     -I$(CMSIS_DIR)/Include
+
+ifneq ($(wildcard $(ALGO_DIR)/include),)
+    INCLUDES += -I$(ALGO_DIR)/include
+endif
 
 # Compiler Optimization & Strict Warning Flags
 COMMON_FLAGS = $(MCU) $(DEFS) $(INCLUDES) -Wall -Wextra -Wpedantic -Werror -ffunction-sections -fdata-sections -O2 -g3
