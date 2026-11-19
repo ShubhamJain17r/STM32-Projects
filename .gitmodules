@@ -4,3 +4,6 @@
 [submodule "lib/STM32-Components"]
 	path = lib/STM32-Components
 	url = https://github.com/ShubhamJain17r/STM32-Components.git
+[submodule "lib/Embedded-Algorithms"]
+	path = lib/Embedded-Algorithms
+	url = https://github.com/ShubhamJain17r/Embedded-Algorithms.git
