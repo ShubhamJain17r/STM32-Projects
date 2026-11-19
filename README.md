@@ -11,10 +11,10 @@ This repository serves as the **incubator playground** where new experimental ro
 Robotics projects at our lab follow a three-stage graduation lifecycle:
 
 1. **Incubator Prototyping (`STM32-Projects/apps/`)**:
-   - New robot ideas start inside `apps/` using `apps/template_project` as the starter template.
+   - New robot ideas start inside `apps/` using [`apps/template_project`](apps/template_project/README.md) as the starter template.
    - Algorithms, sensor drivers, and closed-loop control schemes are validated on NUCLEO-F446RE breadboard/protoboard testbenches.
 2. **Standardization & Architecture Maturation**:
-   - Hardware pin mappings, timer allocations, and communications are standardized against `lib/STM32-Library`, `lib/STM32-Components`, and `lib/Embedded-Algorithms`.
+   - Hardware pin mappings, timer allocations, and communications are standardized against [`lib/STM32-Library`](lib/README.md), [`lib/STM32-Components`](lib/README.md), and [`lib/Embedded-Algorithms`](lib/README.md).
 3. **Official Graduation (Dedicated Product Repository)**:
    - Once a robot reaches full hardware-software maturity, it graduates into its own dedicated repository complete with standalone firmware, KiCad schematic/layout PCBs, and mechanical CAD.
    - **Graduated Reference**: [`STM32-Line-Follower-Robot`](https://github.com/ShubhamJain17r/STM32-Line-Follower-Robot) (Officially graduated from this incubator).
@@ -32,10 +32,11 @@ STM32-Projects/
 ├── lib/
 │   ├── STM32-Library/              # [Layer 1] Bare-metal C++17 Peripheral Engine (stm32::hal)
 │   ├── STM32-Components/           # [Layer 2] External Sensor & Actuator Drivers (stm32::components)
-│   └── Embedded-Algorithms/        # [Algorithms] Shared Robotics Algorithms (stm32::algorithms)
+│   ├── Embedded-Algorithms/        # [Algorithms] Shared Robotics Algorithms (stm32::algorithms)
+│   └── README.md                   # Shared libraries architecture & target documentation
 │
 ├── CMakeLists.txt                  # Dynamic application discovery & modern CMake orchestrator
-├── Makefile                        # Unified root Makefile runner
+├── Makefile                        # Unified root Makefile runner with test suite
 └── README.md                       # Documentation and incubator index
 ```
 
@@ -43,10 +44,22 @@ STM32-Projects/
 
 ## Applications Index
 
-| Application | Target MCU | Key Features / Hardware | Role |
+| Application | Target MCU | Key Features / Hardware | Role | Documentation |
+| :--- | :--- | :--- | :--- | :--- |
+| **`apps/line_follower_benchmark`** | STM32F446RE | 1 kHz closed loop, dual encoder odometry, 20 kHz TB6612 PWM, QTR reflectance array, HC-05 telemetry | Primary Benchmark Reference | [`README.md`](apps/line_follower_benchmark/README.md) |
+| **`apps/template_project`** | STM32F446RE | Deterministic 1 ms SysTick control loop, RobotApp lifecycle state machine, configurable pinout | Starter Template for New Robots | [`README.md`](apps/template_project/README.md) |
+
+---
+
+## Shared Libraries Index (`lib/`)
+
+Applications consume shared components via modern, namespaced CMake targets defined in [`lib/CMakeLists.txt`](lib/CMakeLists.txt) (detailed in [`lib/README.md`](lib/README.md)):
+
+| Target | Layer | Description | Key Modules |
 | :--- | :--- | :--- | :--- |
-| **[`apps/line_follower_benchmark`](apps/line_follower_benchmark)** | STM32F446RE | 1 kHz closed-loop loop, dual encoder odometry, 20 kHz TB6612 PWM, QTR reflectance array, HC-05 telemetry | Primary Benchmark Reference |
-| **[`apps/template_project`](apps/template_project)** | STM32F446RE | Deterministic 1 ms SysTick control loop, RobotApp lifecycle state machine, configurable pinout | Starter Template for New Robots |
+| **`stm32::hal`** | Layer 1 | Bare-metal C++17 Peripheral Engine & CMSIS | GPIO, ADC, Timers, PWM, UART, SPI, I2C, DMA, SysTick |
+| **`stm32::components`** | Layer 2 | External Sensor & Actuator Device Drivers | TB6612FNG, QTR-8A, HC-05 Bluetooth, Encoders, Buzzers |
+| **`stm32::algorithms`** | Algorithms | Platform-Agnostic Robotics Algorithms | PID Controller, Floodfill, LSRB, Kinematics, Low-Pass Filter |
 
 ---
 
@@ -54,7 +67,8 @@ STM32-Projects/
 
 ### Prerequisites
 - GNU ARM Embedded Toolchain (`arm-none-eabi-gcc` / `g++` 7.2.1+)
-- GNU Make 4.0+ or CMake 3.16+
+- Host C++17 Compiler (`g++` / `clang++`) & CMake 3.16+ (for test suite)
+- GNU Make 4.0+
 - OpenOCD or `st-flash` for flashing to NUCLEO-F446RE
 
 ---
@@ -80,9 +94,23 @@ make size
 # 5. Flash to Nucleo board
 make flash                  # Flash via OpenOCD
 make flash-stlink           # Flash via ST-Link utility
+```
 
-# 6. Validate linked submodules
+---
+
+### Automated Testing & Submodule Verification
+
+A unified test suite verifies integrity across all layers:
+
+```bash
+# Run full test suite (Layer 1 HAL, Layer 2 Components, Algorithms Unit Tests, and Apps)
+make test
+
+# Run only submodule compilation checks (Layer 1 & Layer 2)
 make test-submodules
+
+# Run only Embedded-Algorithms unit tests (via CTest)
+make test-algorithms
 ```
 
 ---
